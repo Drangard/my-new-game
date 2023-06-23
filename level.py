@@ -1,5 +1,7 @@
+
 import pygame
 from tiles import Tile
+from tiles import Coin
 from settings import tile_size, screen_width
 from player import Player
 
@@ -8,23 +10,26 @@ class Level:
         self.display_surface = surface
         self.setup_level(level_data)
         self.world_shift = 0
+        self.coin_counter = 0
 
     def setup_level(self, layout):
         self.tiles = pygame.sprite.Group()
+        self.coins = pygame.sprite.Group()
         self.player = pygame.sprite.GroupSingle()
 
         for row_index,row in enumerate(layout):
             for col_index,cell in enumerate(row):
-                #print(f'{row_index},{col_index}:{cell}')
                 x = col_index * tile_size
                 y = row_index * tile_size
-                
                 if cell == 'X':
                     tile = Tile((x,y), tile_size)
                     self.tiles.add(tile)
                 if cell == 'P':
                     player_sprite = Player((x,y))
                     self.player.add(player_sprite)
+                if cell == 'C':
+                    coin = Coin((x, y), tile_size)
+                    self.coins.add(coin)
 
     def scroll_x(self):
         player = self.player.sprite
@@ -56,6 +61,11 @@ class Level:
         player = self.player.sprite
         player.apply_gravity()
 
+        collided_coins = pygame.sprite.spritecollide(player, self.coins, True)
+        if collided_coins:
+            self.coin_counter += len(collided_coins)
+             # Handle coin collision here (e.g., increment score, play sound, etc.)
+
         for sprite in self.tiles.sprites():
             if sprite.rect.colliderect(player.rect):
                 if player.direction.y > 0:
@@ -64,17 +74,19 @@ class Level:
                 elif player.direction.y < 0:
                     player.rect.top = sprite.rect.bottom
                     player.direction.y = 0
-                
-
-                
     def run(self):
-
+        #tiles
         self.tiles.update(self.world_shift)
         self.tiles.draw(self.display_surface)
+        self.coins.update(self.world_shift)
+        self.coins.draw(self.display_surface)
         self.scroll_x()
-
+        #player
         self.player.update()
         self.horizontal_movement_colision()
         self.vertical_movement_colision()
         self.player.draw(self.display_surface)
-        
+        #coins
+        font = pygame.font.Font(None, 36)
+        coin_text = font.render("Coins: " + str(self.coin_counter), True, (255, 255, 255))
+        self.display_surface.blit(coin_text, (10, 10))
